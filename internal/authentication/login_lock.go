@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/xiehqing/hiauth/internal/configx"
+	"github.com/xiehqing/hiauth/internal/db/entity"
 	"github.com/xiehqing/hitoken/htputil"
-	"hiauth/internal/configx"
-	"hiauth/internal/db/entity"
 )
 
 const loginFailCountKey = "loginFailCount"

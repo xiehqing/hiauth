@@ -5,8 +5,8 @@ import (
 
 	"github.com/xiehqing/infra/pkg/ormx"
 
-	"hiauth/internal/db/entity"
-	"hiauth/internal/db/queries"
+	"github.com/xiehqing/hiauth/internal/db/entity"
+	"github.com/xiehqing/hiauth/internal/db/queries"
 )
 
 type ListAuditLogsRequest struct {

@@ -14,9 +14,9 @@ import (
 	"github.com/xiehqing/hitoken/htputil"
 	"github.com/xiehqing/infra/pkg/hertzx"
 
-	auditx "hiauth/internal/audit"
-	"hiauth/internal/db/entity"
-	"hiauth/internal/db/queries"
+	auditx "github.com/xiehqing/hiauth/internal/audit"
+	"github.com/xiehqing/hiauth/internal/db/entity"
+	"github.com/xiehqing/hiauth/internal/db/queries"
 )
 
 func checkLogin() app.HandlerFunc {

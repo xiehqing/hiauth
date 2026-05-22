@@ -7,7 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"hiauth/internal/security"
+	"github.com/xiehqing/hiauth/internal/security"
 	"testing"
 )
 

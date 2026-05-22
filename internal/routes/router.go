@@ -3,17 +3,17 @@ package routes
 import (
 	"context"
 	"errors"
+	"github.com/xiehqing/hiauth/internal/hitokenx"
 	"github.com/xiehqing/infra/pkg/ormx"
-	"hiauth/internal/hitokenx"
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/xiehqing/hiauth/internal/authentication"
+	"github.com/xiehqing/hiauth/internal/authorization"
+	"github.com/xiehqing/hiauth/internal/db/queries"
 	"github.com/xiehqing/infra/pkg/hertzx"
 	"gorm.io/gorm"
-	"hiauth/internal/authentication"
-	"hiauth/internal/authorization"
-	"hiauth/internal/db/queries"
 )
 
 type Router struct {

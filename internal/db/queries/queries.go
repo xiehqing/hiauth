@@ -2,8 +2,8 @@ package queries
 
 import (
 	"context"
+	"github.com/xiehqing/hiauth/internal/db/entity"
 	"gorm.io/gorm"
-	"hiauth/internal/db/entity"
 )
 
 type Queries struct {

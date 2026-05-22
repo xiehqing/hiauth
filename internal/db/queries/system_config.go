@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/xiehqing/infra/pkg/ormx"
 
-	"hiauth/internal/db/entity"
+	"github.com/xiehqing/hiauth/internal/db/entity"
 
 	"gorm.io/gorm"
 )

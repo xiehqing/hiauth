@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/route"
-	"hiauth/internal/authentication"
+	"github.com/xiehqing/hiauth/internal/authentication"
 )
 
 func (r *Router) registerAuthenticationRoutes(api *route.RouterGroup) {

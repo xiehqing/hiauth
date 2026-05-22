@@ -2,12 +2,12 @@ package hitokenx
 
 import (
 	"context"
+	"github.com/xiehqing/hiauth/internal/configx"
+	"github.com/xiehqing/hiauth/internal/db/entity"
+	"github.com/xiehqing/hiauth/internal/db/queries"
 	"github.com/xiehqing/hitoken/core"
 	"github.com/xiehqing/hitoken/htputil"
 	"github.com/xiehqing/infra/pkg/logs"
-	"hiauth/internal/configx"
-	"hiauth/internal/db/entity"
-	"hiauth/internal/db/queries"
 )
 
 func RefreshManager(ctx context.Context, q *queries.Queries) {

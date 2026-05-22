@@ -4,12 +4,12 @@ import (
 	"context"
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/pkg/errors"
+	"github.com/xiehqing/hiauth/cmd/config"
+	"github.com/xiehqing/hiauth/internal/routes"
 	"github.com/xiehqing/infra/pkg/cfgx"
 	"github.com/xiehqing/infra/pkg/hertzx"
 	"github.com/xiehqing/infra/pkg/logs"
 	"github.com/xiehqing/infra/pkg/ormx"
-	"hiauth/cmd/config"
-	"hiauth/internal/routes"
 )
 
 var (

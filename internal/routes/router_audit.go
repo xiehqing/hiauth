@@ -8,8 +8,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/route"
 	"github.com/xiehqing/infra/pkg/hertzx"
 
-	"hiauth/internal/authorization"
-	"hiauth/internal/db/queries"
+	"github.com/xiehqing/hiauth/internal/authorization"
+	"github.com/xiehqing/hiauth/internal/db/queries"
 )
 
 func (r *Router) registerAuditRoutes(api *route.RouterGroup) {

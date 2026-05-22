@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"hiauth/internal/db/queries"
+	"github.com/xiehqing/hiauth/internal/db/queries"
 
 	"gorm.io/gorm"
 )

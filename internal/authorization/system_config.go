@@ -6,8 +6,8 @@ import (
 	"github.com/xiehqing/infra/pkg/ormx"
 	"regexp"
 
-	"hiauth/internal/db/entity"
-	"hiauth/internal/db/queries"
+	"github.com/xiehqing/hiauth/internal/db/entity"
+	"github.com/xiehqing/hiauth/internal/db/queries"
 )
 
 var configKeyPattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_.:-]*$`)

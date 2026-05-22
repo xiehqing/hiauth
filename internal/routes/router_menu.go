@@ -2,11 +2,11 @@ package routes
 
 import (
 	"context"
-	"hiauth/internal/authorization"
+	"github.com/xiehqing/hiauth/internal/authorization"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/route"
-	"hiauth/internal/db/queries"
+	"github.com/xiehqing/hiauth/internal/db/queries"
 )
 
 func (r *Router) registerMenuRoutes(api *route.RouterGroup) {

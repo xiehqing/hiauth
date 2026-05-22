@@ -1,13 +1,13 @@
 package authentication
 
 import (
+	"github.com/xiehqing/hiauth/internal/security"
 	"github.com/xiehqing/infra/pkg/cryptox"
 	"github.com/xiehqing/infra/pkg/logs"
-	"hiauth/internal/security"
 	"sort"
 	"strings"
 
-	"hiauth/internal/db/entity"
+	"github.com/xiehqing/hiauth/internal/db/entity"
 )
 
 func decryptPassword(password, aesKey string) string {

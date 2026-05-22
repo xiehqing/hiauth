@@ -3,7 +3,7 @@ package authentication
 import (
 	"errors"
 
-	"hiauth/internal/db/queries"
+	"github.com/xiehqing/hiauth/internal/db/queries"
 )
 
 var (

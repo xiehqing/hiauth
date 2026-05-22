@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/xiehqing/hiauth/internal/db/entity"
 	"github.com/xiehqing/hitoken/htputil"
-	"hiauth/internal/db/entity"
 )
 
 type LoginRequest struct {

@@ -1,4 +1,4 @@
-module hiauth
+module github.com/xiehqing/hiauth
 
 go 1.26.2
 

@@ -12,8 +12,8 @@ import (
 	"github.com/xiehqing/infra/pkg/ormx"
 	"gorm.io/gorm"
 
-	"hiauth/internal/audit"
-	"hiauth/internal/db/entity"
+	"github.com/xiehqing/hiauth/internal/audit"
+	"github.com/xiehqing/hiauth/internal/db/entity"
 )
 
 type AuditLogListFilter struct {

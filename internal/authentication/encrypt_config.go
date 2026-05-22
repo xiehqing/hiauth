@@ -3,9 +3,9 @@ package authentication
 import (
 	"context"
 
-	"hiauth/internal/configx"
-	"hiauth/internal/db/entity"
-	"hiauth/internal/security"
+	"github.com/xiehqing/hiauth/internal/configx"
+	"github.com/xiehqing/hiauth/internal/db/entity"
+	"github.com/xiehqing/hiauth/internal/security"
 )
 
 const loginEncryptAlgorithm = "RSA-OAEP-SHA256"
