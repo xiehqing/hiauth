@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	"errors"
+	"github.com/cloudwego/hertz/pkg/route"
 	"github.com/xiehqing/hiauth/internal/hitokenx"
 	"github.com/xiehqing/infra/pkg/ormx"
 	"strconv"
@@ -41,6 +42,18 @@ func (r *Router) Init(server *server.Hertz) {
 	api.Use(r.auditContext())
 	api.GET("/health", health)
 
+	r.registerAuthenticationRoutes(api)
+	r.registerUserRoutes(api)
+	r.registerRoleRoutes(api)
+	r.registerDepartmentRoutes(api)
+	r.registerMenuRoutes(api)
+	r.registerSystemConfigRoutes(api)
+	r.registerAuditRoutes(api)
+}
+
+func (r *Router) RegisterRoutes(api *route.RouterGroup) {
+	api.Use(r.auditContext())
+	api.GET("/health", health)
 	r.registerAuthenticationRoutes(api)
 	r.registerUserRoutes(api)
 	r.registerRoleRoutes(api)
