@@ -10,7 +10,7 @@ import (
 )
 
 func (r *Router) registerDepartmentRoutes(api *route.RouterGroup) {
-	departments := api.Group("/departments", checkLogin())
+	departments := api.Group("/departments", checkLogin(), r.tenantContext())
 	departments.GET("", r.listDepartments)
 	departments.GET("/options", r.listDepartmentOptions)
 	departments.POST("", r.createDepartment)
@@ -20,9 +20,13 @@ func (r *Router) registerDepartmentRoutes(api *route.RouterGroup) {
 }
 
 func (r *Router) createDepartment(ctx context.Context, c *app.RequestContext) {
+	tenantID := tenantIDFromContext(ctx)
 	var req authorization.CreateDepartmentRequest
 	if !bindJSON(c, &req) {
 		return
+	}
+	if tenantID > 0 {
+		req.TenantID = tenantID
 	}
 	data, err := r.service.CreateDepartment(ctx, req)
 	handleData(c, data, err)
@@ -33,12 +37,16 @@ func (r *Router) updateDepartment(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
+	tenantID := tenantIDFromContext(ctx)
 
 	var req authorization.UpdateDepartmentRequest
 	if !bindJSON(c, &req) {
 		return
 	}
 	req.ID = id
+	if tenantID > 0 {
+		req.TenantID = tenantID
+	}
 	data, err := r.service.UpdateDepartment(ctx, req)
 	handleData(c, data, err)
 }
@@ -53,9 +61,11 @@ func (r *Router) getDepartment(ctx context.Context, c *app.RequestContext) {
 }
 
 func (r *Router) listDepartments(ctx context.Context, c *app.RequestContext) {
+	tenantID := tenantIDFromContext(ctx)
 	req := authorization.ListDepartmentsRequest{
 		DepartmentListFilter: queries.DepartmentListFilter{
 			Keyword:  c.DefaultQuery("keyword", ""),
+			TenantID: tenantID,
 			ParentID: queryInt64Ptr(c, "parentId"),
 		},
 	}
@@ -64,7 +74,8 @@ func (r *Router) listDepartments(ctx context.Context, c *app.RequestContext) {
 }
 
 func (r *Router) listDepartmentOptions(ctx context.Context, c *app.RequestContext) {
-	data, err := r.service.ListAllDepartments(ctx)
+	tenantID := tenantIDFromContext(ctx)
+	data, err := r.service.ListAllDepartments(ctx, tenantID)
 	handleData(c, data, err)
 }
 

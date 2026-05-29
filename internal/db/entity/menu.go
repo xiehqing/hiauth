@@ -13,6 +13,7 @@ const (
 
 type Menu struct {
 	ormx.BaseModel
+	TenantID int64  `json:"tenantId" gorm:"type:bigint;not null;default:0;index;comment:'tenant id'"`
 	Type     int    `json:"type" gorm:"type:int(11);not null;comment:'类型：菜单1，按钮2'"`
 	ParentID int64  `json:"parentId" gorm:"type:bigint;not null;default:0;index;comment:'上级菜单'"`
 	Name     string `json:"name" gorm:"type:varchar(64);not null;comment:'菜单名称'"`

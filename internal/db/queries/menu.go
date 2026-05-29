@@ -10,6 +10,7 @@ import (
 )
 
 type MenuListFilter struct {
+	TenantID int64  `json:"tenantId" form:"tenantId"`
 	Keyword  string `json:"keyword" form:"keyword"`
 	Type     *int   `json:"type" form:"type"`
 	ParentID *int64 `json:"parentId" form:"parentId"`
@@ -47,19 +48,26 @@ func (q *Queries) CreateMenu(ctx context.Context, menu *entity.Menu) error {
 func (q *Queries) UpdateMenu(ctx context.Context, menu *entity.Menu) error {
 	return q.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var before entity.Menu
-		if err := tx.First(&before, "id = ?", menu.ID).Error; err != nil {
+		beforeDB := tx
+		if menu.TenantID > 0 {
+			beforeDB = beforeDB.Where("tenant_id = ?", menu.TenantID)
+		}
+		if err := beforeDB.First(&before, "id = ?", menu.ID).Error; err != nil {
 			return err
 		}
-		if err := tx.
-			Model(&entity.Menu{}).
-			Where("id = ?", menu.ID).
-			Select("Type", "ParentID", "Name", "Route", "Sort", "Icon", "Show", "UpdatedBy").
-			Updates(menu).
-			Error; err != nil {
+		updateDB := tx.Model(&entity.Menu{}).Where("id = ?", menu.ID)
+		if menu.TenantID > 0 {
+			updateDB = updateDB.Where("tenant_id = ?", menu.TenantID)
+		}
+		if err := updateDB.Select("Type", "ParentID", "Name", "Route", "Sort", "Icon", "Show", "UpdatedBy").Updates(menu).Error; err != nil {
 			return err
 		}
 		var after entity.Menu
-		if err := tx.First(&after, "id = ?", menu.ID).Error; err != nil {
+		afterDB := tx
+		if menu.TenantID > 0 {
+			afterDB = afterDB.Where("tenant_id = ?", menu.TenantID)
+		}
+		if err := afterDB.First(&after, "id = ?", menu.ID).Error; err != nil {
 			return err
 		}
 		return q.auditUpdate(ctx, tx, "menu", after.TableName(), menu.ID, before, after)
@@ -106,6 +114,9 @@ func (q *Queries) DeleteMenu(ctx context.Context, id int64) error {
 
 func (q *Queries) ListMenus(ctx context.Context, filter MenuListFilter) ([]entity.Menu, error) {
 	db := q.db.WithContext(ctx).Model(&entity.Menu{})
+	if filter.TenantID > 0 {
+		db = db.Where("tenant_id = ?", filter.TenantID)
+	}
 	if ormx.KeywordPresent(filter.Keyword) {
 		keyword := ormx.LikeKeyword(filter.Keyword)
 		db = db.Where("name LIKE ? OR route LIKE ?", keyword, keyword)
@@ -125,9 +136,13 @@ func (q *Queries) ListMenus(ctx context.Context, filter MenuListFilter) ([]entit
 	return menus, err
 }
 
-func (q *Queries) ListAllMenus(ctx context.Context) ([]entity.Menu, error) {
+func (q *Queries) ListAllMenus(ctx context.Context, tenantID int64) ([]entity.Menu, error) {
 	var menus []entity.Menu
-	err := q.db.WithContext(ctx).Order("sort asc, id asc").Find(&menus).Error
+	db := q.db.WithContext(ctx)
+	if tenantID > 0 {
+		db = db.Where("tenant_id = ?", tenantID)
+	}
+	err := db.Order("sort asc, id asc").Find(&menus).Error
 	return menus, err
 }
 

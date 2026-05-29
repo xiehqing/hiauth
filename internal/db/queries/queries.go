@@ -22,6 +22,7 @@ func (q *Queries) DB() *gorm.DB {
 
 func (q *Queries) AutoMigrate(ctx context.Context) error {
 	return q.db.WithContext(ctx).AutoMigrate(
+		&entity.Tenant{},
 		&entity.User{},
 		&entity.Role{},
 		&entity.Department{},

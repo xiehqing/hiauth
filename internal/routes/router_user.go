@@ -10,7 +10,7 @@ import (
 )
 
 func (r *Router) registerUserRoutes(api *route.RouterGroup) {
-	users := api.Group("/users", checkLogin())
+	users := api.Group("/users", checkLogin(), r.tenantContext())
 	users.GET("", r.listUsers)
 	users.POST("", r.createUser)
 	users.GET("/:id", r.getUser)
@@ -19,9 +19,14 @@ func (r *Router) registerUserRoutes(api *route.RouterGroup) {
 }
 
 func (r *Router) createUser(ctx context.Context, c *app.RequestContext) {
+	tenantID := tenantIDFromContext(ctx)
 	var req authorization.CreateUserRequest
 	if !bindJSON(c, &req) {
 		return
+	}
+	if tenantID > 0 {
+		req.TenantID = tenantID
+		req.TenantIDs = nil
 	}
 	data, err := r.service.CreateUser(ctx, req)
 	handleData(c, data, err)
@@ -32,12 +37,17 @@ func (r *Router) updateUser(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
+	tenantID := tenantIDFromContext(ctx)
 
 	var req authorization.UpdateUserRequest
 	if !bindJSON(c, &req) {
 		return
 	}
 	req.ID = id
+	if tenantID > 0 {
+		req.TenantID = tenantID
+		req.TenantIDs = nil
+	}
 	data, err := r.service.UpdateUser(ctx, req)
 	handleData(c, data, err)
 }
@@ -52,9 +62,11 @@ func (r *Router) getUser(ctx context.Context, c *app.RequestContext) {
 }
 
 func (r *Router) listUsers(ctx context.Context, c *app.RequestContext) {
+	tenantID := tenantIDFromContext(ctx)
 	req := authorization.ListUsersRequest{
 		UserListFilter: queries.UserListFilter{
 			Pagination:   pagination(c),
+			TenantID:     tenantID,
 			Status:       queryIntPtr(c, "status"),
 			RoleID:       queryInt64(c, "roleId"),
 			DepartmentID: queryInt64(c, "departmentId"),

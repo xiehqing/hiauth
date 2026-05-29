@@ -11,14 +11,18 @@ import (
 
 type UserListFilter struct {
 	ormx.Pagination
+	TenantID     int64 `json:"tenantId" form:"tenantId"`
 	Status       *int  `json:"status" form:"status"`
 	RoleID       int64 `json:"roleId" form:"roleId"`
 	DepartmentID int64 `json:"departmentId" form:"departmentId"`
 }
 
-func (q *Queries) CreateUser(ctx context.Context, user *entity.User, roleIDs []int64) error {
+func (q *Queries) CreateUser(ctx context.Context, user *entity.User, roleIDs []int64, tenantIDs []int64) error {
 	return q.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Omit("Roles", "Department").Create(user).Error; err != nil {
+		if err := tx.Omit("Roles", "Tenants", "Department").Create(user).Error; err != nil {
+			return err
+		}
+		if err := replaceUserTenants(tx, user, tenantIDs); err != nil {
 			return err
 		}
 		if err := replaceUserRoles(tx, user, roleIDs); err != nil {
@@ -27,23 +31,33 @@ func (q *Queries) CreateUser(ctx context.Context, user *entity.User, roleIDs []i
 		if err := q.auditCreate(ctx, tx, "user", user.TableName(), user.ID, user); err != nil {
 			return err
 		}
-		return q.auditAuthorize(ctx, tx, "user_roles", "user_roles", user.ID, map[string]any{
+		if err := q.auditAuthorize(ctx, tx, "user_roles", "user_roles", user.ID, map[string]any{
 			"userId":  user.ID,
 			"roleIds": []int64{},
 		}, map[string]any{
 			"userId":  user.ID,
 			"roleIds": roleIDs,
+		}); err != nil {
+			return err
+		}
+		return q.auditAuthorize(ctx, tx, "user_tenants", "user_tenants", user.ID, map[string]any{
+			"userId":    user.ID,
+			"tenantIds": []int64{},
+		}, map[string]any{
+			"userId":    user.ID,
+			"tenantIds": normalizeAuditIDs(tenantIDs),
 		})
 	})
 }
 
-func (q *Queries) UpdateUser(ctx context.Context, user *entity.User, roleIDs []int64) error {
+func (q *Queries) UpdateUser(ctx context.Context, user *entity.User, roleIDs []int64, tenantIDs []int64) error {
 	return q.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var before entity.User
-		if err := tx.Preload("Roles").Preload("Department").First(&before, "id = ?", user.ID).Error; err != nil {
+		if err := tx.Preload("Tenants").Preload("Roles").Preload("Department").First(&before, "id = ?", user.ID).Error; err != nil {
 			return err
 		}
 		beforeRoleIDs := roleIDsFromRoles(before.Roles)
+		beforeTenantIDs := tenantIDsFromTenants(before.Tenants)
 
 		fields := []string{"Username", "Nickname", "Phone", "Email", "Status", "DepartmentID", "UpdatedBy"}
 		if user.Password != "" {
@@ -53,23 +67,35 @@ func (q *Queries) UpdateUser(ctx context.Context, user *entity.User, roleIDs []i
 		if err := tx.Model(&entity.User{}).Where("id = ?", user.ID).Select(fields).Updates(user).Error; err != nil {
 			return err
 		}
+		if err := replaceUserTenants(tx, user, tenantIDs); err != nil {
+			return err
+		}
 		if err := replaceUserRoles(tx, user, roleIDs); err != nil {
 			return err
 		}
 
 		var after entity.User
-		if err := tx.Preload("Roles").Preload("Department").First(&after, "id = ?", user.ID).Error; err != nil {
+		if err := tx.Preload("Tenants").Preload("Roles").Preload("Department").First(&after, "id = ?", user.ID).Error; err != nil {
 			return err
 		}
 		if err := q.auditUpdate(ctx, tx, "user", after.TableName(), user.ID, before, after); err != nil {
 			return err
 		}
-		return q.auditAuthorize(ctx, tx, "user_roles", "user_roles", user.ID, map[string]any{
+		if err := q.auditAuthorize(ctx, tx, "user_roles", "user_roles", user.ID, map[string]any{
 			"userId":  user.ID,
 			"roleIds": beforeRoleIDs,
 		}, map[string]any{
 			"userId":  user.ID,
 			"roleIds": normalizeAuditIDs(roleIDs),
+		}); err != nil {
+			return err
+		}
+		return q.auditAuthorize(ctx, tx, "user_tenants", "user_tenants", user.ID, map[string]any{
+			"userId":    user.ID,
+			"tenantIds": beforeTenantIDs,
+		}, map[string]any{
+			"userId":    user.ID,
+			"tenantIds": normalizeAuditIDs(tenantIDs),
 		})
 	})
 }
@@ -77,6 +103,7 @@ func (q *Queries) UpdateUser(ctx context.Context, user *entity.User, roleIDs []i
 func (q *Queries) GetUser(ctx context.Context, id int64) (*entity.User, error) {
 	var user entity.User
 	err := q.db.WithContext(ctx).
+		Preload("Tenants").
 		Preload("Roles").
 		Preload("Department").
 		First(&user, "id = ?", id).
@@ -90,6 +117,7 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (*entity.User, error) {
 func (q *Queries) GetUserForAuth(ctx context.Context, id int64) (*entity.User, error) {
 	var user entity.User
 	err := q.db.WithContext(ctx).
+		Preload("Tenants").
 		Preload("Roles").
 		Preload("Roles.Menus").
 		Preload("Department").
@@ -104,6 +132,7 @@ func (q *Queries) GetUserForAuth(ctx context.Context, id int64) (*entity.User, e
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
 	var user entity.User
 	err := q.db.WithContext(ctx).
+		Preload("Tenants").
 		Preload("Roles").
 		Preload("Roles.Menus").
 		Preload("Department").
@@ -118,12 +147,15 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (*enti
 func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 	return q.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var before entity.User
-		if err := tx.Preload("Roles").Preload("Department").First(&before, "id = ?", id).Error; err != nil {
+		if err := tx.Preload("Tenants").Preload("Roles").Preload("Department").First(&before, "id = ?", id).Error; err != nil {
 			return err
 		}
 
 		user := entity.User{StatusAbleModel: ormx.StatusAbleModel{BaseModel: ormx.BaseModel{ID: id}}}
 		if err := tx.Model(&user).Association("Roles").Clear(); err != nil {
+			return err
+		}
+		if err := tx.Model(&user).Association("Tenants").Clear(); err != nil {
 			return err
 		}
 
@@ -140,6 +172,9 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 
 func (q *Queries) ListUsers(ctx context.Context, filter UserListFilter) (ormx.PageResult[entity.User], error) {
 	db := q.db.WithContext(ctx).Model(&entity.User{}).Preload("Roles").Preload("Department")
+	if filter.TenantID > 0 {
+		db = db.Joins("JOIN user_tenants ON user_tenants.user_id = user.id AND user_tenants.tenant_id = ?", filter.TenantID)
+	}
 	db = db.Where("LOWER(username) <> ?", "admin")
 	if ormx.KeywordPresent(filter.Keyword) {
 		keyword := ormx.LikeKeyword(filter.Keyword)
@@ -152,7 +187,7 @@ func (q *Queries) ListUsers(ctx context.Context, filter UserListFilter) (ormx.Pa
 		db = db.Where("id IN (SELECT user_id FROM user_roles WHERE role_id = ?)", filter.RoleID)
 	}
 	if filter.DepartmentID > 0 {
-		departmentIDs, err := q.departmentDescendantIDs(ctx, filter.DepartmentID)
+		departmentIDs, err := q.departmentDescendantIDs(ctx, filter.DepartmentID, filter.TenantID)
 		if err != nil {
 			return ormx.PageResult[entity.User]{}, err
 		}
@@ -169,6 +204,16 @@ func (q *Queries) ListUsers(ctx context.Context, filter UserListFilter) (ormx.Pa
 	})
 }
 
+func replaceUserTenants(tx *gorm.DB, user *entity.User, tenantIDs []int64) error {
+	tenants := make([]entity.Tenant, 0, len(tenantIDs))
+	for _, id := range tenantIDs {
+		if id > 0 {
+			tenants = append(tenants, entity.Tenant{StatusAbleModel: ormx.StatusAbleModel{BaseModel: ormx.BaseModel{ID: id}}})
+		}
+	}
+	return tx.Model(user).Association("Tenants").Replace(tenants)
+}
+
 func replaceUserRoles(tx *gorm.DB, user *entity.User, roleIDs []int64) error {
 	roles := make([]entity.Role, 0, len(roleIDs))
 	for _, id := range roleIDs {
@@ -177,6 +222,16 @@ func replaceUserRoles(tx *gorm.DB, user *entity.User, roleIDs []int64) error {
 		}
 	}
 	return tx.Model(user).Association("Roles").Replace(roles)
+}
+
+func tenantIDsFromTenants(tenants []entity.Tenant) []int64 {
+	result := make([]int64, 0, len(tenants))
+	for _, tenant := range tenants {
+		if tenant.ID > 0 {
+			result = append(result, tenant.ID)
+		}
+	}
+	return result
 }
 
 func roleIDsFromRoles(roles []entity.Role) []int64 {
@@ -205,8 +260,8 @@ func normalizeAuditIDs(ids []int64) []int64 {
 	return result
 }
 
-func (q *Queries) departmentDescendantIDs(ctx context.Context, departmentID int64) ([]int64, error) {
-	departments, err := q.ListAllDepartments(ctx)
+func (q *Queries) departmentDescendantIDs(ctx context.Context, departmentID int64, tenantID int64) ([]int64, error) {
+	departments, err := q.ListAllDepartments(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}

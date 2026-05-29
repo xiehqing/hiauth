@@ -17,6 +17,8 @@ const (
 
 type AuditLog struct {
 	ormx.BaseModel
+	TenantID     int64         `json:"tenantId" gorm:"type:bigint;not null;default:0;index;comment:'tenant id'"`
+	TenantCode   string        `json:"tenantCode" gorm:"type:varchar(64);index;comment:'tenant code'"`
 	RequestID    string        `json:"requestId" gorm:"type:varchar(64);index;comment:'request id'"`
 	OperatorID   int64         `json:"operatorId" gorm:"type:bigint;not null;default:0;index;comment:'operator id'"`
 	OperatorName string        `json:"operatorName" gorm:"type:varchar(64);index;comment:'operator name'"`
@@ -41,6 +43,7 @@ func (a *AuditLog) TableName() string {
 
 type AuditChange struct {
 	ormx.BaseModel
+	TenantID      int64  `json:"tenantId" gorm:"type:bigint;not null;default:0;index;comment:'tenant id'"`
 	AuditLogID    int64  `json:"auditLogId" gorm:"type:bigint;not null;index;comment:'audit log id'"`
 	DBTableName   string `json:"tableName" gorm:"column:table_name;type:varchar(128);not null;index;comment:'table name'"`
 	RecordID      int64  `json:"recordId" gorm:"type:bigint;not null;default:0;index;comment:'record id'"`

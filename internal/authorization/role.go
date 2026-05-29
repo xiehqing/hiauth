@@ -10,6 +10,7 @@ import (
 )
 
 type CreateRoleRequest struct {
+	TenantID    int64  `json:"tenantId"`
 	DisplayName string `json:"displayName"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -18,6 +19,7 @@ type CreateRoleRequest struct {
 
 type UpdateRoleRequest struct {
 	ID          int64  `json:"id"`
+	TenantID    int64  `json:"tenantId"`
 	DisplayName string `json:"displayName"`
 	Description string `json:"description"`
 	Operator    string `json:"operator"`
@@ -43,6 +45,7 @@ func (as *Service) CreateRole(ctx context.Context, req CreateRoleRequest) (*enti
 			CreatedBy: normalizeString(req.Operator),
 			UpdatedBy: normalizeString(req.Operator),
 		},
+		TenantID:    req.TenantID,
 		DisplayName: normalizeString(req.DisplayName),
 		Name:        normalizeString(req.Name),
 		Description: normalizeString(req.Description),
@@ -68,6 +71,7 @@ func (as *Service) UpdateRole(ctx context.Context, req UpdateRoleRequest) (*enti
 			ID:        req.ID,
 			UpdatedBy: normalizeString(req.Operator),
 		},
+		TenantID:    req.TenantID,
 		DisplayName: normalizeString(req.DisplayName),
 		Description: normalizeString(req.Description),
 	}
@@ -99,8 +103,8 @@ func (as *Service) ListRoles(ctx context.Context, req ListRolesRequest) (ormx.Pa
 	return as.queries.ListRoles(ctx, req.RoleListFilter)
 }
 
-func (as *Service) ListAllRoles(ctx context.Context) ([]entity.Role, error) {
-	return as.queries.ListAllRoles(ctx)
+func (as *Service) ListAllRoles(ctx context.Context, tenantID int64) ([]entity.Role, error) {
+	return as.queries.ListAllRoles(ctx, tenantID)
 }
 
 func (as *Service) DeleteRole(ctx context.Context, id int64) error {

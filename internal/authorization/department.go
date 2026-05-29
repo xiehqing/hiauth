@@ -10,6 +10,7 @@ import (
 )
 
 type CreateDepartmentRequest struct {
+	TenantID int64  `json:"tenantId"`
 	ParentID int64  `json:"parentId"`
 	Name     string `json:"name"`
 	Sort     int    `json:"sort"`
@@ -18,6 +19,7 @@ type CreateDepartmentRequest struct {
 
 type UpdateDepartmentRequest struct {
 	ID       int64  `json:"id"`
+	TenantID int64  `json:"tenantId"`
 	ParentID int64  `json:"parentId"`
 	Name     string `json:"name"`
 	Sort     int    `json:"sort"`
@@ -41,7 +43,7 @@ func (as *Service) CreateDepartment(ctx context.Context, req CreateDepartmentReq
 		return nil, fmt.Errorf("%w: 上级部门不合法", ErrInvalidArgument)
 	}
 	name := normalizeString(req.Name)
-	if err := as.validateDepartmentNameUnique(ctx, req.ParentID, name, 0); err != nil {
+	if err := as.validateDepartmentNameUnique(ctx, req.TenantID, req.ParentID, name, 0); err != nil {
 		return nil, err
 	}
 
@@ -50,6 +52,7 @@ func (as *Service) CreateDepartment(ctx context.Context, req CreateDepartmentReq
 			CreatedBy: normalizeString(req.Operator),
 			UpdatedBy: normalizeString(req.Operator),
 		},
+		TenantID: req.TenantID,
 		ParentID: req.ParentID,
 		Name:     name,
 		Sort:     req.Sort,
@@ -72,7 +75,7 @@ func (as *Service) UpdateDepartment(ctx context.Context, req UpdateDepartmentReq
 		return nil, fmt.Errorf("%w: 部门名称不能为空", ErrInvalidArgument)
 	}
 	name := normalizeString(req.Name)
-	if err := as.validateDepartmentNameUnique(ctx, req.ParentID, name, req.ID); err != nil {
+	if err := as.validateDepartmentNameUnique(ctx, req.TenantID, req.ParentID, name, req.ID); err != nil {
 		return nil, err
 	}
 
@@ -81,6 +84,7 @@ func (as *Service) UpdateDepartment(ctx context.Context, req UpdateDepartmentReq
 			ID:        req.ID,
 			UpdatedBy: normalizeString(req.Operator),
 		},
+		TenantID: req.TenantID,
 		ParentID: req.ParentID,
 		Name:     name,
 		Sort:     req.Sort,
@@ -113,7 +117,7 @@ func (as *Service) ListDepartments(ctx context.Context, req ListDepartmentsReque
 		return nil, err
 	}
 	if req.Keyword != "" || req.ParentID != nil {
-		allDepartments, err := as.queries.ListAllDepartments(ctx)
+		allDepartments, err := as.queries.ListAllDepartments(ctx, req.TenantID)
 		if err != nil {
 			return nil, err
 		}
@@ -122,8 +126,8 @@ func (as *Service) ListDepartments(ctx context.Context, req ListDepartmentsReque
 	return buildDepartmentTree(departments), nil
 }
 
-func (as *Service) ListAllDepartments(ctx context.Context) ([]DepartmentTree, error) {
-	departments, err := as.queries.ListAllDepartments(ctx)
+func (as *Service) ListAllDepartments(ctx context.Context, tenantID int64) ([]DepartmentTree, error) {
+	departments, err := as.queries.ListAllDepartments(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -137,8 +141,8 @@ func (as *Service) DeleteDepartment(ctx context.Context, id int64) error {
 	return normalizeDBError(as.queries.DeleteDepartment(ctx, id))
 }
 
-func (as *Service) validateDepartmentNameUnique(ctx context.Context, parentID int64, name string, excludeID int64) error {
-	exists, err := as.queries.DepartmentNameExists(ctx, parentID, name, excludeID)
+func (as *Service) validateDepartmentNameUnique(ctx context.Context, tenantID int64, parentID int64, name string, excludeID int64) error {
+	exists, err := as.queries.DepartmentNameExists(ctx, tenantID, parentID, name, excludeID)
 	if err != nil {
 		return err
 	}

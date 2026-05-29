@@ -31,6 +31,12 @@ const (
 	SecurityLoginLockedMinutes    = "security.login.locked_minutes"
 	SecurityLoginConcurrentEnable = "security.login.concurrent.enabled"
 
+	SecurityAuthProvider    = "security.auth.provider"
+	SecurityAuthLDAPEnabled = "security.auth.ldap.enabled"
+	SecurityAuthLDAPConfig  = "security.auth.ldap.config"
+
+	PlatformTenantCreateEnabled = "platform.tenant.create.enabled"
+
 	SecurityTokenExpireMinutes = "security.token.expire_minutes"
 	SecurityTokenJwtSecretKey  = "security.token.jwt_secret_key"
 	SecurityTokenStorage       = "security.token.storage"

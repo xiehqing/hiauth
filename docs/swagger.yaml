@@ -11,6 +11,8 @@ tags:
     description: 健康检查
   - name: 认证管理
     description: 登录、登出和当前用户
+  - name: 租户管理
+    description: 租户管理
   - name: 用户管理
     description: 用户管理
   - name: 角色管理
@@ -50,6 +52,27 @@ paths:
       tags: [认证管理]
       summary: 用户登录
       description: 使用用户名和密码登录；开启登录加密时，password 为 RSA-OAEP-SHA256 加密后的 Base64 密文。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/auth/admin-login:
+    post:
+      tags: [认证管理]
+      summary: 平台管理员登录
+      description: 使用用户名和密码登录，并在签发 Token 前校验用户是否为平台管理员；非平台管理员不允许登录。
       requestBody:
         required: true
         content:
@@ -113,14 +136,182 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
 
+  /api/v1/tenants:
+    get:
+      tags: [租户管理]
+      summary: 查询租户列表
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Keyword"
+        - $ref: "#/components/parameters/PageNo"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/SortField"
+        - $ref: "#/components/parameters/SortOrder"
+        - name: status
+          in: query
+          schema:
+            type: integer
+            enum: [0, 1]
+          description: 租户状态，0 禁用，1 启用
+      responses:
+        "200":
+          description: 租户分页列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantPageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    post:
+      tags: [租户管理]
+      summary: 创建租户
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTenantRequest"
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/tenants/{id}:
+    get:
+      tags: [租户管理]
+      summary: 查询租户详情
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: 租户详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    put:
+      tags: [租户管理]
+      summary: 更新租户
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTenantRequest"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    delete:
+      tags: [租户管理]
+      summary: 删除租户
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/tenants/{id}/users:
+    get:
+      tags: [租户管理]
+      summary: 查询租户用户列表
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: 租户用户列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    post:
+      tags: [租户管理]
+      summary: 添加已有用户到租户
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddTenantUsersRequest"
+      responses:
+        "200":
+          description: 添加成功，返回租户用户列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/tenants/{id}/invitations:
+    post:
+      tags: [租户管理]
+      summary: 邀请用户加入租户
+      description: 如果用户名已存在，则直接加入租户；如果用户名不存在，则创建用户并加入租户。
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteTenantUserRequest"
+      responses:
+        "200":
+          description: 邀请成功，返回用户信息
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
   /api/v1/users:
     get:
       tags: [用户管理]
       summary: 查询用户列表
       parameters:
         - $ref: "#/components/parameters/Keyword"
-
-
+        - $ref: "#/components/parameters/TenantID"
         - $ref: "#/components/parameters/PageNo"
         - $ref: "#/components/parameters/PageSize"
         - $ref: "#/components/parameters/SortField"
@@ -226,6 +417,7 @@ paths:
       summary: 查询角色列表
       parameters:
         - $ref: "#/components/parameters/Keyword"
+        - $ref: "#/components/parameters/TenantID"
         - name: builtIn
           in: query
           required: false
@@ -268,6 +460,8 @@ paths:
       tags: [角色管理]
       summary: 获取角色全量下拉选项
       description: 用于用户新增或编辑时选择角色，返回全部角色数据。
+      parameters:
+        - $ref: "#/components/parameters/TenantID"
       responses:
         "200":
           description: 角色选项列表
@@ -370,6 +564,7 @@ paths:
       description: 返回部门树结构。关键字或 parentId 命中非顶级部门时，会同时返回其上级部门以保留完整层级。
       parameters:
         - $ref: "#/components/parameters/Keyword"
+        - $ref: "#/components/parameters/TenantID"
         - name: parentId
           in: query
           schema:
@@ -407,6 +602,8 @@ paths:
       tags: [部门管理]
       summary: 获取部门全量下拉选项
       description: 用于用户新增或编辑时选择部门，返回全部部门树结构。
+      parameters:
+        - $ref: "#/components/parameters/TenantID"
       responses:
         "200":
           description: 部门选项列表
@@ -473,6 +670,7 @@ paths:
       description: 返回菜单树结构。关键字或 parentId 命中非顶级菜单时，会同时返回其上级菜单以保留完整层级。
       parameters:
         - $ref: "#/components/parameters/Keyword"
+        - $ref: "#/components/parameters/TenantID"
         - name: type
           in: query
           schema:
@@ -731,6 +929,7 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Keyword"
+        - $ref: "#/components/parameters/TenantID"
         - $ref: "#/components/parameters/PageNo"
         - $ref: "#/components/parameters/PageSize"
         - $ref: "#/components/parameters/SortField"
@@ -831,6 +1030,13 @@ components:
       schema:
         type: string
       description: 关键字
+    TenantID:
+      name: tenantId
+      in: query
+      schema:
+        type: integer
+        format: int64
+      description: 租户 ID，不传或传 0 表示默认/平台级数据；也可通过请求头 X-TENANT-CODE 或 X-TENAT-ID 传入，且 X-TENANT-CODE 优先级最高；服务端会校验当前用户是否有该租户权限
     PageNo:
       name: pageNo
       in: query
@@ -913,6 +1119,11 @@ components:
           example: Bearer
         user:
           $ref: "#/components/schemas/User"
+        tenants:
+          type: array
+          description: 当前用户所属租户列表
+          items:
+            $ref: "#/components/schemas/Tenant"
         roles:
           type: array
           items:
@@ -996,6 +1207,11 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/Role"
+            tenants:
+              type: array
+              description: 用户所属租户列表
+              items:
+                $ref: "#/components/schemas/Tenant"
             departmentId:
               type: integer
               format: int64
@@ -1007,6 +1223,9 @@ components:
         - $ref: "#/components/schemas/BaseModel"
         - type: object
           properties:
+            tenantId:
+              type: integer
+              format: int64
             displayName:
               type: string
             name:
@@ -1027,6 +1246,9 @@ components:
         - $ref: "#/components/schemas/BaseModel"
         - type: object
           properties:
+            tenantId:
+              type: integer
+              format: int64
             parentId:
               type: integer
               format: int64
@@ -1049,6 +1271,9 @@ components:
         - $ref: "#/components/schemas/BaseModel"
         - type: object
           properties:
+            tenantId:
+              type: integer
+              format: int64
             type:
               type: integer
               enum: [0, 1, 2]
@@ -1109,6 +1334,9 @@ components:
         - $ref: "#/components/schemas/BaseModel"
         - type: object
           properties:
+            tenantId:
+              type: integer
+              format: int64
             auditLogId:
               type: integer
               format: int64
@@ -1147,6 +1375,13 @@ components:
         - $ref: "#/components/schemas/BaseModel"
         - type: object
           properties:
+            tenantId:
+              type: integer
+              format: int64
+              description: 租户 ID
+            tenantCode:
+              type: string
+              description: 租户编码
             requestId:
               type: string
               description: 请求链路 ID
@@ -1207,6 +1442,45 @@ components:
               description: 数据库变更明细，列表接口通常为空，详情接口返回
               items:
                 $ref: "#/components/schemas/AuditChange"
+
+    Tenant:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          properties:
+            code:
+              type: string
+              example: demo
+              description: 租户编码，必须以字母开头，长度 2-32，仅支持字母、数字、下划线和短横线
+            name:
+              type: string
+              example: 演示租户
+              description: 租户名称
+            ownerUserId:
+              type: integer
+              format: int64
+              example: 1
+              description: 租户所有者用户 ID；平台管理员可管理全部租户，租户所有者拥有本租户管理权限
+            contactName:
+              type: string
+              example: 张三
+              description: 联系人
+            contactPhone:
+              type: string
+              example: "13800138000"
+              description: 联系电话
+            expireAt:
+              type: string
+              nullable: true
+              example: "2026-12-31 23:59:59"
+              description: 过期时间，格式 yyyy-MM-dd HH:mm:ss
+            description:
+              type: string
+              description: 备注说明
+            status:
+              type: integer
+              enum: [0, 1]
+              description: 租户状态，0 禁用，1 启用
 
     PageUser:
       type: object
@@ -1278,11 +1552,31 @@ components:
           type: integer
         pageSize:
           type: integer
+    PageTenant:
+      type: object
+      properties:
+        list:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tenant"
+        total:
+          type: integer
+          format: int64
+        pageNo:
+          type: integer
+        pageSize:
+          type: integer
 
     CreateUserRequest:
       type: object
       required: [username, password, nickname]
       properties:
+        tenantIds:
+          type: array
+          description: 用户所属租户 ID 列表
+          items:
+            type: integer
+            format: int64
         username:
           type: string
         password:
@@ -1327,6 +1621,10 @@ components:
       type: object
       required: [displayName, name]
       properties:
+        tenantId:
+          type: integer
+          format: int64
+          description: 租户 ID，不传或传 0 表示默认/平台级数据
         displayName:
           type: string
         name:
@@ -1361,6 +1659,10 @@ components:
       type: object
       required: [name]
       properties:
+        tenantId:
+          type: integer
+          format: int64
+          description: 租户 ID，不传或传 0 表示默认/平台级数据
         parentId:
           type: integer
           format: int64
@@ -1380,6 +1682,10 @@ components:
       type: object
       required: [name]
       properties:
+        tenantId:
+          type: integer
+          format: int64
+          description: 租户 ID，不传或传 0 表示默认/平台级数据
         type:
           type: integer
           enum: [0, 1, 2]
@@ -1444,6 +1750,124 @@ components:
       allOf:
         - $ref: "#/components/schemas/CreateSystemConfigRequest"
 
+    CreateTenantRequest:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+          example: demo
+          description: 租户编码，必须以字母开头，长度 2-32，仅支持字母、数字、下划线和短横线
+        name:
+          type: string
+          example: 演示租户
+        ownerUserId:
+          type: integer
+          format: int64
+          example: 1
+          description: 租户所有者用户 ID；平台管理员创建时可指定，不传默认当前用户
+        contactName:
+          type: string
+          example: 张三
+        contactPhone:
+          type: string
+          example: "13800138000"
+        expireAt:
+          type: string
+          example: "2026-12-31 23:59:59"
+          description: 过期时间，格式 yyyy-MM-dd HH:mm:ss；为空表示不过期
+        description:
+          type: string
+        status:
+          type: integer
+          enum: [0, 1]
+          default: 1
+          description: 租户状态，0 禁用，1 启用；不传默认启用
+        operator:
+          type: string
+    UpdateTenantRequest:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+          example: demo
+          description: 租户编码，必须以字母开头，长度 2-32，仅支持字母、数字、下划线和短横线
+        name:
+          type: string
+          example: 演示租户
+        ownerUserId:
+          type: integer
+          format: int64
+          example: 1
+          description: 租户所有者用户 ID；仅平台管理员可修改，非平台管理员提交会被忽略
+        contactName:
+          type: string
+          example: 张三
+        contactPhone:
+          type: string
+          example: "13800138000"
+        expireAt:
+          type: string
+          example: "2026-12-31 23:59:59"
+          description: 过期时间，格式 yyyy-MM-dd HH:mm:ss；为空表示不过期
+        description:
+          type: string
+        status:
+          type: integer
+          enum: [0, 1]
+          description: 租户状态，0 禁用，1 启用
+        operator:
+          type: string
+
+    AddTenantUsersRequest:
+      type: object
+      required: [userIds]
+      properties:
+        userIds:
+          type: array
+          description: 已有用户 ID 列表
+          items:
+            type: integer
+            format: int64
+        operator:
+          type: string
+
+    InviteTenantUserRequest:
+      type: object
+      required: [username]
+      properties:
+        username:
+          type: string
+          description: 用户名；已存在时直接加入租户，不存在时创建用户
+        password:
+          type: string
+          format: password
+          description: 新用户密码；用户名不存在时必填
+        nickname:
+          type: string
+          description: 新用户昵称；用户名不存在时必填
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        status:
+          type: integer
+          enum: [0, 1]
+          default: 1
+        roleIds:
+          type: array
+          description: 邀请后授予的角色 ID 列表
+          items:
+            type: integer
+            format: int64
+        departmentId:
+          type: integer
+          format: int64
+        operator:
+          type: string
+
     UserResponse:
       allOf:
         - $ref: "#/components/schemas/Response"
@@ -1451,6 +1875,15 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/User"
+    UserListResponse:
+      allOf:
+        - $ref: "#/components/schemas/Response"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/User"
     RoleResponse:
       allOf:
         - $ref: "#/components/schemas/Response"
@@ -1518,6 +1951,13 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/SystemConfig"
+    TenantResponse:
+      allOf:
+        - $ref: "#/components/schemas/Response"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Tenant"
     SystemConfigPageResponse:
       allOf:
         - $ref: "#/components/schemas/Response"
@@ -1525,6 +1965,13 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/PageSystemConfig"
+    TenantPageResponse:
+      allOf:
+        - $ref: "#/components/schemas/Response"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PageTenant"
     AuditLogResponse:
       allOf:
         - $ref: "#/components/schemas/Response"

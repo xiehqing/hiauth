@@ -11,6 +11,7 @@ func (r *Router) registerAuthenticationRoutes(api *route.RouterGroup) {
 	auth := api.Group("/auth")
 	auth.GET("/encrypt-config", r.encryptConfig)
 	auth.POST("/login", r.login)
+	auth.POST("/admin-login", r.adminLogin)
 	auth.POST("/logout", checkLogin(), r.logout)
 	auth.GET("/me", checkLogin(), r.currentUser)
 }
@@ -27,6 +28,16 @@ func (r *Router) login(ctx context.Context, c *app.RequestContext) {
 	}
 
 	data, err := r.authentication.Login(ctx, req)
+	handleData(c, data, err)
+}
+
+func (r *Router) adminLogin(ctx context.Context, c *app.RequestContext) {
+	var req authentication.LoginRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+
+	data, err := r.authentication.AdminLogin(ctx, req)
 	handleData(c, data, err)
 }
 

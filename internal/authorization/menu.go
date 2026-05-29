@@ -11,6 +11,7 @@ import (
 )
 
 type CreateMenuRequest struct {
+	TenantID int64  `json:"tenantId"`
 	Type     int    `json:"type"`
 	ParentID int64  `json:"parentId"`
 	Name     string `json:"name"`
@@ -23,6 +24,7 @@ type CreateMenuRequest struct {
 
 type UpdateMenuRequest struct {
 	ID       int64  `json:"id"`
+	TenantID int64  `json:"tenantId"`
 	Type     int    `json:"type"`
 	ParentID int64  `json:"parentId"`
 	Name     string `json:"name"`
@@ -55,6 +57,7 @@ func (as *Service) CreateMenu(ctx context.Context, req CreateMenuRequest) (*enti
 			CreatedBy: normalizeString(req.Operator),
 			UpdatedBy: normalizeString(req.Operator),
 		},
+		TenantID: req.TenantID,
 		Type:     req.Type,
 		ParentID: req.ParentID,
 		Name:     normalizeString(req.Name),
@@ -89,6 +92,7 @@ func (as *Service) UpdateMenu(ctx context.Context, req UpdateMenuRequest) (*enti
 			ID:        req.ID,
 			UpdatedBy: normalizeString(req.Operator),
 		},
+		TenantID: req.TenantID,
 		Type:     req.Type,
 		ParentID: req.ParentID,
 		Name:     normalizeString(req.Name),
@@ -125,7 +129,7 @@ func (as *Service) ListMenus(ctx context.Context, req ListMenusRequest) ([]MenuT
 		return nil, err
 	}
 	if req.Keyword != "" || req.ParentID != nil {
-		allMenus, err := as.queries.ListAllMenus(ctx)
+		allMenus, err := as.queries.ListAllMenus(ctx, req.TenantID)
 		if err != nil {
 			return nil, err
 		}

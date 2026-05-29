@@ -20,6 +20,7 @@ type LoginResponse struct {
 	AccessToken string            `json:"accessToken"`
 	TokenType   string            `json:"tokenType"`
 	User        *entity.User      `json:"user"`
+	Tenants     []entity.Tenant   `json:"tenants"`
 	Roles       []string          `json:"roles"`
 	Permissions []string          `json:"permissions"`
 	Menus       []MenuTree        `json:"menus"`
@@ -32,6 +33,14 @@ type MenuTree struct {
 }
 
 func (s *Service) Login(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
+	return s.login(ctx, req, false)
+}
+
+func (s *Service) AdminLogin(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
+	return s.login(ctx, req, true)
+}
+
+func (s *Service) login(ctx context.Context, req LoginRequest, adminOnly bool) (*LoginResponse, error) {
 	username := strings.TrimSpace(req.Username)
 	if username == "" || req.Password == "" {
 		return nil, fmt.Errorf("%w: 用户名和密码不能为空", ErrInvalidArgument)
@@ -46,6 +55,12 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*LoginResponse, 
 	}
 	if user.Status != userStatusEnabled {
 		return nil, ErrUserDisabled
+	}
+	if adminOnly && !isAdminUsername(user.Username) && !hasPlatformManagerRole(user.Roles) {
+		return nil, ErrAdminRequired
+	}
+	if !isAdminUsername(user.Username) && !hasPlatformManagerRole(user.Roles) && len(user.Tenants) == 0 {
+		return nil, ErrNoPermission
 	}
 	loginID := strconv.FormatInt(user.ID, 10)
 	shouldLockOnFailure := !isAdminUsername(user.Username)
@@ -69,11 +84,12 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*LoginResponse, 
 			return nil, ErrInvalidLogin
 		}
 	}
-	if user.Password != md5Password(authPwd) {
+	provider := s.authProvider(ctx)
+	if err := provider.Authenticate(ctx, user, authPwd); err != nil {
 		if shouldLockOnFailure {
 			_ = s.recordLoginFailure(ctx, loginID)
 		}
-		return nil, ErrInvalidLogin
+		return nil, err
 	}
 	if shouldLockOnFailure {
 		s.clearLoginFailure(loginID)
@@ -101,6 +117,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*LoginResponse, 
 		AccessToken: token,
 		TokenType:   "Bearer",
 		User:        user,
+		Tenants:     user.Tenants,
 		Roles:       roles,
 		Permissions: permissions,
 		Menus:       menus,
@@ -154,6 +171,7 @@ func (s *Service) CurrentUser(ctx context.Context, token string) (*LoginResponse
 		AccessToken: token,
 		TokenType:   "Bearer",
 		User:        user,
+		Tenants:     user.Tenants,
 		Roles:       roles,
 		Permissions: permissions,
 		Menus:       menus,
@@ -165,7 +183,7 @@ func (s *Service) authMenus(ctx context.Context, user *entity.User) ([]string, [
 	var menus []entity.Menu
 	var err error
 	if user != nil && isAdminUsername(user.Username) {
-		menus, err = s.queries.ListAllMenus(ctx)
+		menus, err = s.queries.ListAllMenus(ctx, 0)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -174,7 +192,7 @@ func (s *Service) authMenus(ctx context.Context, user *entity.User) ([]string, [
 		if len(menus) == 0 {
 			return []string{}, []MenuTree{}, nil
 		}
-		allMenus, err := s.queries.ListAllMenus(ctx)
+		allMenus, err := s.queries.ListAllMenus(ctx, 0)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -184,4 +202,13 @@ func (s *Service) authMenus(ctx context.Context, user *entity.User) ([]string, [
 	tree := buildMenuTree(menus)
 	permissions := menuPermissions(menus)
 	return permissions, tree, nil
+}
+
+func hasPlatformManagerRole(roles []entity.Role) bool {
+	for _, role := range roles {
+		if strings.EqualFold(strings.TrimSpace(role.Name), entity.RoleOfPlatformManager) {
+			return true
+		}
+	}
+	return false
 }

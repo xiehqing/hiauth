@@ -18,6 +18,7 @@ import (
 
 type AuditLogListFilter struct {
 	ormx.Pagination
+	TenantID     int64  `json:"tenantId" form:"tenantId"`
 	OperatorName string `json:"operatorName" form:"operatorName"`
 	Module       string `json:"module" form:"module"`
 	Action       string `json:"action" form:"action"`
@@ -68,6 +69,9 @@ func (q *Queries) GetAuditLog(ctx context.Context, id int64) (*entity.AuditLog, 
 
 func (q *Queries) ListAuditLogs(ctx context.Context, filter AuditLogListFilter) (ormx.PageResult[entity.AuditLog], error) {
 	db := q.db.WithContext(ctx).Model(&entity.AuditLog{})
+	if filter.TenantID > 0 {
+		db = db.Where("tenant_id = ?", filter.TenantID)
+	}
 	if ormx.KeywordPresent(filter.Keyword) {
 		keyword := ormx.LikeKeyword(filter.Keyword)
 		db = db.Where("operator_name LIKE ? OR description LIKE ? OR path LIKE ?", keyword, keyword, keyword)
@@ -210,6 +214,7 @@ func (q *Queries) recordAudit(ctx context.Context, tx *gorm.DB, options auditRec
 	fieldChanges := marshalFieldChanges(beforeMap, afterMap)
 
 	log := entity.AuditLog{
+		TenantID:     tenantIDFromAuditData(beforeMap, afterMap),
 		RequestID:    auditContext.RequestID,
 		OperatorID:   auditContext.OperatorID,
 		OperatorName: auditContext.OperatorName,
@@ -232,6 +237,7 @@ func (q *Queries) recordAudit(ctx context.Context, tx *gorm.DB, options auditRec
 	}
 
 	change := entity.AuditChange{
+		TenantID:      log.TenantID,
 		DBTableName:   options.tableName,
 		RecordID:      options.resourceID,
 		Operation:     options.operation,
@@ -246,6 +252,27 @@ func (q *Queries) recordAudit(ctx context.Context, tx *gorm.DB, options auditRec
 	}
 	change.AuditLogID = log.ID
 	return tx.Create(&change).Error
+}
+
+func tenantIDFromAuditData(values ...map[string]any) int64 {
+	for _, data := range values {
+		if data == nil {
+			continue
+		}
+		value, ok := data["tenantId"]
+		if !ok {
+			continue
+		}
+		switch item := value.(type) {
+		case float64:
+			return int64(item)
+		case int64:
+			return item
+		case int:
+			return int64(item)
+		}
+	}
+	return 0
 }
 
 func marshalAuditData(value any) (string, map[string]any) {
@@ -389,7 +416,9 @@ func ignoreAuditCompareField(field string) bool {
 
 func auditModule(resourceType string) string {
 	switch resourceType {
-	case "user", "user_roles":
+	case "tenant":
+		return "租户管理"
+	case "user", "user_roles", "user_tenants":
 		return "用户管理"
 	case "role", "role_menus":
 		return "角色管理"
@@ -419,6 +448,8 @@ func auditDescription(resourceType, action string, resourceID int64) string {
 
 func auditResourceName(resourceType string) string {
 	switch resourceType {
+	case "tenant":
+		return "租户"
 	case "user":
 		return "用户"
 	case "user_roles":
