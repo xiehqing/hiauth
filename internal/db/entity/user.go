@@ -9,7 +9,6 @@ type User struct {
 	Nickname     string     `json:"nickname" gorm:"type:varchar(64);not null;comment:'姓名'"`
 	Phone        string     `json:"phone" gorm:"type:varchar(32);comment:'手机号'"`
 	Email        string     `json:"email" gorm:"type:varchar(128);comment:'邮箱'"`
-	Tenants      []Tenant   `json:"tenants,omitempty" gorm:"many2many:user_tenants;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Roles        []Role     `json:"roles,omitempty" gorm:"many2many:user_roles;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	DepartmentID int64      `json:"departmentId" gorm:"type:bigint;not null;default:0;index;comment:'部门'"`
 	Department   Department `json:"department,omitempty" gorm:"foreignKey:DepartmentID;references:ID;constraint:-"`

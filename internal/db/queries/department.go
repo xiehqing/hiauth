@@ -10,7 +10,6 @@ import (
 )
 
 type DepartmentListFilter struct {
-	TenantID int64  `json:"tenantId" form:"tenantId"`
 	Keyword  string `json:"keyword" form:"keyword"`
 	ParentID *int64 `json:"parentId" form:"parentId"`
 }
@@ -27,26 +26,19 @@ func (q *Queries) CreateDepartment(ctx context.Context, department *entity.Depar
 func (q *Queries) UpdateDepartment(ctx context.Context, department *entity.Department) error {
 	return q.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var before entity.Department
-		beforeDB := tx
-		if department.TenantID > 0 {
-			beforeDB = beforeDB.Where("tenant_id = ?", department.TenantID)
-		}
-		if err := beforeDB.First(&before, "id = ?", department.ID).Error; err != nil {
+		if err := tx.First(&before, "id = ?", department.ID).Error; err != nil {
 			return err
 		}
-		updateDB := tx.Model(&entity.Department{}).Where("id = ?", department.ID)
-		if department.TenantID > 0 {
-			updateDB = updateDB.Where("tenant_id = ?", department.TenantID)
-		}
-		if err := updateDB.Select("ParentID", "Name", "Sort", "UpdatedBy").Updates(department).Error; err != nil {
+		if err := tx.
+			Model(&entity.Department{}).
+			Where("id = ?", department.ID).
+			Select("ParentID", "Name", "Sort", "UpdatedBy").
+			Updates(department).
+			Error; err != nil {
 			return err
 		}
 		var after entity.Department
-		afterDB := tx
-		if department.TenantID > 0 {
-			afterDB = afterDB.Where("tenant_id = ?", department.TenantID)
-		}
-		if err := afterDB.First(&after, "id = ?", department.ID).Error; err != nil {
+		if err := tx.First(&after, "id = ?", department.ID).Error; err != nil {
 			return err
 		}
 		return q.auditUpdate(ctx, tx, "department", after.TableName(), department.ID, before, after)
@@ -62,12 +54,9 @@ func (q *Queries) GetDepartment(ctx context.Context, id int64) (*entity.Departme
 	return &department, nil
 }
 
-func (q *Queries) DepartmentNameExists(ctx context.Context, tenantID int64, parentID int64, name string, excludeID int64) (bool, error) {
+func (q *Queries) DepartmentNameExists(ctx context.Context, parentID int64, name string, excludeID int64) (bool, error) {
 	db := q.db.WithContext(ctx).Model(&entity.Department{}).
 		Where("parent_id = ? AND name = ?", parentID, name)
-	if tenantID > 0 {
-		db = db.Where("tenant_id = ?", tenantID)
-	}
 	if excludeID > 0 {
 		db = db.Where("id <> ?", excludeID)
 	}
@@ -102,9 +91,6 @@ func (q *Queries) DeleteDepartment(ctx context.Context, id int64) error {
 
 func (q *Queries) ListDepartments(ctx context.Context, filter DepartmentListFilter) ([]entity.Department, error) {
 	db := q.db.WithContext(ctx).Model(&entity.Department{})
-	if filter.TenantID > 0 {
-		db = db.Where("tenant_id = ?", filter.TenantID)
-	}
 	if ormx.KeywordPresent(filter.Keyword) {
 		db = db.Where("name LIKE ?", ormx.LikeKeyword(filter.Keyword))
 	}
@@ -117,12 +103,8 @@ func (q *Queries) ListDepartments(ctx context.Context, filter DepartmentListFilt
 	return departments, err
 }
 
-func (q *Queries) ListAllDepartments(ctx context.Context, tenantID int64) ([]entity.Department, error) {
+func (q *Queries) ListAllDepartments(ctx context.Context) ([]entity.Department, error) {
 	var departments []entity.Department
-	db := q.db.WithContext(ctx)
-	if tenantID > 0 {
-		db = db.Where("tenant_id = ?", tenantID)
-	}
-	err := db.Order("sort asc, id asc").Find(&departments).Error
+	err := q.db.WithContext(ctx).Order("sort asc, id asc").Find(&departments).Error
 	return departments, err
 }

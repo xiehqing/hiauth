@@ -11,8 +11,7 @@ import (
 
 type RoleListFilter struct {
 	ormx.Pagination
-	TenantID int64 `json:"tenantId" form:"tenantId"`
-	BuiltIn  *int  `json:"builtIn" form:"builtIn"`
+	BuiltIn *int
 }
 
 func (q *Queries) CreateRole(ctx context.Context, role *entity.Role) error {
@@ -27,26 +26,19 @@ func (q *Queries) CreateRole(ctx context.Context, role *entity.Role) error {
 func (q *Queries) UpdateRole(ctx context.Context, role *entity.Role) error {
 	return q.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var before entity.Role
-		beforeDB := tx.Preload("Menus")
-		if role.TenantID > 0 {
-			beforeDB = beforeDB.Where("tenant_id = ?", role.TenantID)
-		}
-		if err := beforeDB.First(&before, "id = ?", role.ID).Error; err != nil {
+		if err := tx.Preload("Menus").First(&before, "id = ?", role.ID).Error; err != nil {
 			return err
 		}
-		updateDB := tx.Model(&entity.Role{}).Where("id = ?", role.ID)
-		if role.TenantID > 0 {
-			updateDB = updateDB.Where("tenant_id = ?", role.TenantID)
-		}
-		if err := updateDB.Select("DisplayName", "Description", "UpdatedBy").Updates(role).Error; err != nil {
+		if err := tx.
+			Model(&entity.Role{}).
+			Where("id = ?", role.ID).
+			Select("DisplayName", "Description", "UpdatedBy").
+			Updates(role).
+			Error; err != nil {
 			return err
 		}
 		var after entity.Role
-		afterDB := tx.Preload("Menus")
-		if role.TenantID > 0 {
-			afterDB = afterDB.Where("tenant_id = ?", role.TenantID)
-		}
-		if err := afterDB.First(&after, "id = ?", role.ID).Error; err != nil {
+		if err := tx.Preload("Menus").First(&after, "id = ?", role.ID).Error; err != nil {
 			return err
 		}
 		return q.auditUpdate(ctx, tx, "role", after.TableName(), role.ID, before, after)
@@ -90,9 +82,6 @@ func (q *Queries) DeleteRole(ctx context.Context, id int64) error {
 
 func (q *Queries) ListRoles(ctx context.Context, filter RoleListFilter) (ormx.PageResult[entity.Role], error) {
 	db := q.db.WithContext(ctx).Model(&entity.Role{})
-	if filter.TenantID > 0 {
-		db = db.Where("tenant_id = ?", filter.TenantID)
-	}
 	if ormx.KeywordPresent(filter.Keyword) {
 		keyword := ormx.LikeKeyword(filter.Keyword)
 		db = db.Where("display_name LIKE ? OR name LIKE ? OR description LIKE ?", keyword, keyword, keyword)
@@ -111,13 +100,9 @@ func (q *Queries) ListRoles(ctx context.Context, filter RoleListFilter) (ormx.Pa
 	})
 }
 
-func (q *Queries) ListAllRoles(ctx context.Context, tenantID int64) ([]entity.Role, error) {
+func (q *Queries) ListAllRoles(ctx context.Context) ([]entity.Role, error) {
 	var roles []entity.Role
-	db := q.db.WithContext(ctx)
-	if tenantID > 0 {
-		db = db.Where("tenant_id = ?", tenantID)
-	}
-	err := db.Order("id asc").Find(&roles).Error
+	err := q.db.WithContext(ctx).Order("id asc").Find(&roles).Error
 	return roles, err
 }
 

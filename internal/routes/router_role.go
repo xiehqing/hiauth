@@ -10,7 +10,7 @@ import (
 )
 
 func (r *Router) registerRoleRoutes(api *route.RouterGroup) {
-	roles := api.Group("/roles", checkLogin(), r.tenantContext())
+	roles := api.Group("/roles", checkLogin())
 	roles.GET("", r.listRoles)
 	roles.GET("/options", r.listRoleOptions)
 	roles.POST("", r.createRole)
@@ -22,13 +22,9 @@ func (r *Router) registerRoleRoutes(api *route.RouterGroup) {
 }
 
 func (r *Router) createRole(ctx context.Context, c *app.RequestContext) {
-	tenantID := tenantIDFromContext(ctx)
 	var req authorization.CreateRoleRequest
 	if !bindJSON(c, &req) {
 		return
-	}
-	if tenantID > 0 {
-		req.TenantID = tenantID
 	}
 	data, err := r.service.CreateRole(ctx, req)
 	handleData(c, data, err)
@@ -39,16 +35,12 @@ func (r *Router) updateRole(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	tenantID := tenantIDFromContext(ctx)
 
 	var req authorization.UpdateRoleRequest
 	if !bindJSON(c, &req) {
 		return
 	}
 	req.ID = id
-	if tenantID > 0 {
-		req.TenantID = tenantID
-	}
 	data, err := r.service.UpdateRole(ctx, req)
 	handleData(c, data, err)
 }
@@ -63,11 +55,9 @@ func (r *Router) getRole(ctx context.Context, c *app.RequestContext) {
 }
 
 func (r *Router) listRoles(ctx context.Context, c *app.RequestContext) {
-	tenantID := tenantIDFromContext(ctx)
 	req := authorization.ListRolesRequest{
 		RoleListFilter: queries.RoleListFilter{
 			Pagination: pagination(c),
-			TenantID:   tenantID,
 			BuiltIn:    queryIntPtr(c, "builtIn"),
 		},
 	}
@@ -76,8 +66,7 @@ func (r *Router) listRoles(ctx context.Context, c *app.RequestContext) {
 }
 
 func (r *Router) listRoleOptions(ctx context.Context, c *app.RequestContext) {
-	tenantID := tenantIDFromContext(ctx)
-	data, err := r.service.ListAllRoles(ctx, tenantID)
+	data, err := r.service.ListAllRoles(ctx)
 	handleData(c, data, err)
 }
 

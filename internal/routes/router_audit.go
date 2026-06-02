@@ -13,7 +13,7 @@ import (
 )
 
 func (r *Router) registerAuditRoutes(api *route.RouterGroup) {
-	audits := api.Group("/audit-logs", checkLogin(), r.tenantContext())
+	audits := api.Group("/audit-logs", checkLogin())
 	audits.GET("", r.listAuditLogs)
 	audits.GET("/:id", r.getAuditLog)
 }
@@ -23,11 +23,9 @@ func (r *Router) listAuditLogs(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	tenantID := tenantIDFromContext(ctx)
 	req := authorization.ListAuditLogsRequest{
 		AuditLogListFilter: queries.AuditLogListFilter{
 			Pagination:   pagination(c),
-			TenantID:     tenantID,
 			OperatorName: c.DefaultQuery("operatorName", ""),
 			Module:       c.DefaultQuery("module", ""),
 			Action:       c.DefaultQuery("action", ""),

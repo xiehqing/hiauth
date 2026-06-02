@@ -21,8 +21,6 @@ const (
 var usernamePattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_.-]{2,31}$`)
 
 type CreateUserRequest struct {
-	TenantID     int64   `json:"tenantId"`
-	TenantIDs    []int64 `json:"tenantIds"`
 	Username     string  `json:"username"`
 	Password     string  `json:"password"`
 	Nickname     string  `json:"nickname"`
@@ -36,8 +34,6 @@ type CreateUserRequest struct {
 
 type UpdateUserRequest struct {
 	ID           int64   `json:"id"`
-	TenantID     int64   `json:"tenantId"`
-	TenantIDs    []int64 `json:"tenantIds"`
 	Username     string  `json:"username"`
 	Password     string  `json:"password"`
 	Nickname     string  `json:"nickname"`
@@ -107,7 +103,7 @@ func (as *Service) CreateUser(ctx context.Context, req CreateUserRequest) (*enti
 		DepartmentID: req.DepartmentID,
 	}
 
-	err := as.queries.CreateUser(ctx, user, normalizeIDs(req.RoleIDs), normalizeTenantIDs(req.TenantID, req.TenantIDs))
+	err := as.queries.CreateUser(ctx, user, normalizeIDs(req.RoleIDs))
 	if err != nil {
 		return nil, normalizeDBError(err)
 	}
@@ -149,19 +145,10 @@ func (as *Service) UpdateUser(ctx context.Context, req UpdateUserRequest) (*enti
 		DepartmentID: req.DepartmentID,
 	}
 
-	if err := as.queries.UpdateUser(ctx, user, normalizeIDs(req.RoleIDs), normalizeTenantIDs(req.TenantID, req.TenantIDs)); err != nil {
+	if err := as.queries.UpdateUser(ctx, user, normalizeIDs(req.RoleIDs)); err != nil {
 		return nil, normalizeDBError(err)
 	}
 	return as.GetUser(ctx, req.ID)
-}
-
-func normalizeTenantIDs(tenantID int64, tenantIDs []int64) []int64 {
-	ids := make([]int64, 0, len(tenantIDs)+1)
-	if tenantID > 0 {
-		ids = append(ids, tenantID)
-	}
-	ids = append(ids, tenantIDs...)
-	return normalizeIDs(ids)
 }
 
 func (as *Service) GetUser(ctx context.Context, id int64) (*entity.User, error) {

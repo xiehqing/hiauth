@@ -60,7 +60,7 @@ func (r *Router) auditContext() app.HandlerFunc {
 					}
 				}
 			}
-		} else if string(c.Path()) == "/api/v1/auth/login" || string(c.Path()) == "/api/v1/auth/admin-login" {
+		} else if string(c.Path()) == "/api/v1/auth/login" {
 			value.OperatorName = loginUsername(c)
 		}
 
@@ -96,7 +96,7 @@ func skipPlainRequestAudit(method, path string, statusCode int) bool {
 	if method == "GET" {
 		return false
 	}
-	if path == "/api/v1/auth/login" || path == "/api/v1/auth/admin-login" || path == "/api/v1/auth/logout" {
+	if path == "/api/v1/auth/login" || path == "/api/v1/auth/logout" {
 		return false
 	}
 	return statusCode < 400
@@ -108,11 +108,6 @@ func requestAuditFromRoute(method, path string) queries.RequestAudit {
 		ResourceType: "request",
 	}
 	switch {
-	case path == "/api/v1/auth/admin-login":
-		request.Module = "认证管理"
-		request.Action = entity.AuditOperationLogin
-		request.ResourceType = "auth"
-		request.Description = "平台管理员登录"
 	case path == "/api/v1/auth/login":
 		request.Module = "认证管理"
 		request.Action = entity.AuditOperationLogin
@@ -131,10 +126,6 @@ func requestAuditFromRoute(method, path string) queries.RequestAudit {
 		request.Module = "用户管理"
 		request.ResourceType = "user"
 		request.Description = plainRequestDescription(method, "用户")
-	case strings.HasPrefix(path, "/api/v1/tenants"):
-		request.Module = "租户管理"
-		request.ResourceType = "tenant"
-		request.Description = plainRequestDescription(method, "租户")
 	case strings.HasPrefix(path, "/api/v1/roles"):
 		request.Module = "角色管理"
 		request.ResourceType = "role"

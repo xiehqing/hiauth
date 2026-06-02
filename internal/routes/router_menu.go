@@ -10,7 +10,7 @@ import (
 )
 
 func (r *Router) registerMenuRoutes(api *route.RouterGroup) {
-	menus := api.Group("/menus", checkLogin(), r.tenantContext())
+	menus := api.Group("/menus", checkLogin())
 	menus.GET("", r.listMenus)
 	menus.POST("", r.createMenu)
 	menus.GET("/:id", r.getMenu)
@@ -19,13 +19,9 @@ func (r *Router) registerMenuRoutes(api *route.RouterGroup) {
 }
 
 func (r *Router) createMenu(ctx context.Context, c *app.RequestContext) {
-	tenantID := tenantIDFromContext(ctx)
 	var req authorization.CreateMenuRequest
 	if !bindJSON(c, &req) {
 		return
-	}
-	if tenantID > 0 {
-		req.TenantID = tenantID
 	}
 	data, err := r.service.CreateMenu(ctx, req)
 	handleData(c, data, err)
@@ -36,16 +32,12 @@ func (r *Router) updateMenu(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	tenantID := tenantIDFromContext(ctx)
 
 	var req authorization.UpdateMenuRequest
 	if !bindJSON(c, &req) {
 		return
 	}
 	req.ID = id
-	if tenantID > 0 {
-		req.TenantID = tenantID
-	}
 	data, err := r.service.UpdateMenu(ctx, req)
 	handleData(c, data, err)
 }
@@ -60,11 +52,9 @@ func (r *Router) getMenu(ctx context.Context, c *app.RequestContext) {
 }
 
 func (r *Router) listMenus(ctx context.Context, c *app.RequestContext) {
-	tenantID := tenantIDFromContext(ctx)
 	req := authorization.ListMenusRequest{
 		MenuListFilter: queries.MenuListFilter{
 			Keyword:  c.DefaultQuery("keyword", ""),
-			TenantID: tenantID,
 			Type:     queryIntPtr(c, "type"),
 			ParentID: queryInt64Ptr(c, "parentId"),
 			Show:     queryIntPtr(c, "show"),
