@@ -165,6 +165,17 @@ func (as *Service) GetUser(ctx context.Context, id int64) (*entity.User, error) 
 	return user, nil
 }
 
+func (as *Service) GetUsers(ctx context.Context, ids []int64) ([]entity.User, error) {
+	if len(ids) <= 0 {
+		return nil, ErrInvalidID
+	}
+	users, err := as.queries.GetUsers(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
 func (as *Service) ListUsers(ctx context.Context, req ListUsersRequest) (ormx.PageResult[entity.User], error) {
 	return as.queries.ListUsers(ctx, req.UserListFilter)
 }

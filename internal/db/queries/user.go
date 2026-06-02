@@ -87,6 +87,19 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (*entity.User, error) {
 	return &user, nil
 }
 
+func (q *Queries) GetUsers(ctx context.Context, ids []int64) ([]entity.User, error) {
+	var user []entity.User
+	err := q.db.WithContext(ctx).
+		Preload("Roles").
+		Preload("Department").
+		Find(&user, "id in ?", ids).
+		Error
+	if err != nil {
+		return nil, ormx.NotFoundAsNil(err)
+	}
+	return user, nil
+}
+
 func (q *Queries) GetUserForAuth(ctx context.Context, id int64) (*entity.User, error) {
 	var user entity.User
 	err := q.db.WithContext(ctx).

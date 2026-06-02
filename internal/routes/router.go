@@ -33,6 +33,14 @@ func New(db *gorm.DB) *Router {
 	}
 }
 
+func (r *Router) Authentication() *authentication.Service {
+	return r.authentication
+}
+
+func (r *Router) Authorization() *authorization.Service {
+	return r.service
+}
+
 func (r *Router) RefreshTokenManager(ctx context.Context) {
 	hitokenx.RefreshManager(ctx, r.q)
 }
